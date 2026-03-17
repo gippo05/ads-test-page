@@ -330,10 +330,39 @@ async function sendBidRequest(slot) {
         dot.className = 'status-dot error';
         stats.errors++;
         addLog('error', 'Request failed for ' + slot.id, err.message);
-        body.querySelector('.placeholder').innerHTML = '<span style="color:#ff4444">Error: ' + escapeHtml(err.message) + '</span>';
+        var placeholder = body.querySelector('.placeholder');
+        if (placeholder) {
+            placeholder.innerHTML = '<span style="color:#ff4444">Error: ' + escapeHtml(err.message) + '</span>';
+        } else {
+            body.innerHTML = '<div class="placeholder" style="width:200px;height:100px;color:#ff4444"><span>Error: ' + escapeHtml(err.message) + '</span></div>';
+        }
         updateStats();
         return { slot: slot, response: null, elapsed: elapsed2, error: err.message };
     }
+}
+
+function createSandboxedAdFrame(content, frameWidth, frameHeight, creativeWidth, creativeHeight, background) {
+    var iframe = document.createElement('iframe');
+    iframe.width = frameWidth;
+    iframe.height = frameHeight;
+    iframe.style.border = 'none';
+    iframe.style.borderRadius = '4px';
+    iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+    iframe.setAttribute('scrolling', 'no');
+
+    var safeCreativeWidth = creativeWidth || frameWidth;
+    var safeCreativeHeight = creativeHeight || frameHeight;
+    var scale = Math.min(frameWidth / safeCreativeWidth, frameHeight / safeCreativeHeight, 1);
+
+    iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<style>' +
+        'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:' + background + ';}' +
+        'body{display:flex;align-items:center;justify-content:center;}' +
+        '.creative-shell{width:' + safeCreativeWidth + 'px;height:' + safeCreativeHeight + 'px;display:flex;align-items:center;justify-content:center;transform:scale(' + scale + ');transform-origin:center center;}' +
+        'img,video{max-width:100%;max-height:100%;display:block;}' +
+        '</style></head><body><div class="creative-shell">' + content + '</div></body></html>';
+
+    return iframe;
 }
 
 // ─── Render Ad Creative ───────────────────────────────────────────
@@ -347,28 +376,13 @@ function renderAd(slot, bid, container) {
     if (slot.type === 'banner' || slot.type === 'audio') {
         var w = bid.w || slot.w || 300;
         var h = bid.h || slot.h || 250;
-        var iframe = document.createElement('iframe');
-        iframe.width = Math.min(w, 340);
-        iframe.height = Math.min(h, 300);
-        iframe.style.border = 'none';
-        iframe.style.borderRadius = '4px';
-        iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
-        iframe.setAttribute('scrolling', 'no');
+        var frame = createSandboxedAdFrame(adm, Math.min(w, 340), Math.min(h, 300), w, h, '#f7f7f7');
 
         container.innerHTML = '';
         var wrapper = document.createElement('div');
         wrapper.className = 'ad-rendered';
-        wrapper.appendChild(iframe);
+        wrapper.appendChild(frame);
         container.appendChild(wrapper);
-
-        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write('<!DOCTYPE html><html><head><style>' +
-            'body{margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;' +
-            'width:' + w + 'px;height:' + h + 'px;background:#f7f7f7}' +
-            'img{max-width:100%;max-height:100%;display:block}' +
-            '</style></head><body>' + adm + '</body></html>');
-        iframeDoc.close();
 
         addLog('imp', 'Rendered ' + slot.type + ' ad in iframe', w + '×' + h);
 
@@ -385,22 +399,12 @@ function renderAd(slot, bid, container) {
                 '</div>';
             addLog('imp', 'Rendered VAST response', adm.length + ' bytes');
         } else {
-            // Render as banner fallback
-            var iframe2 = document.createElement('iframe');
-            iframe2.width = Math.min(slot.w, 340);
-            iframe2.height = Math.min(slot.h, 300);
-            iframe2.style.border = 'none';
-            iframe2.setAttribute('sandbox', 'allow-scripts allow-popups');
+            var frame2 = createSandboxedAdFrame(adm, Math.min(slot.w, 340), Math.min(slot.h, 300), slot.w, slot.h, '#000');
             container.innerHTML = '';
             var wrapper2 = document.createElement('div');
             wrapper2.className = 'ad-rendered';
-            wrapper2.appendChild(iframe2);
+            wrapper2.appendChild(frame2);
             container.appendChild(wrapper2);
-            var doc2 = iframe2.contentDocument || iframe2.contentWindow.document;
-            doc2.open();
-            doc2.write('<!DOCTYPE html><html><head><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;width:' +
-                slot.w + 'px;height:' + slot.h + 'px}</style></head><body>' + adm + '</body></html>');
-            doc2.close();
             addLog('imp', 'Rendered video fallback ad', slot.w + '×' + slot.h);
         }
 
@@ -430,21 +434,12 @@ function renderAd(slot, bid, container) {
                 '</div>';
             addLog('imp', 'Rendered native ad', title);
         } else {
-            // Fallback: render adm as banner HTML in iframe
-            var iframe3 = document.createElement('iframe');
-            iframe3.width = 340;
-            iframe3.height = 250;
-            iframe3.style.border = 'none';
-            iframe3.setAttribute('sandbox', 'allow-scripts allow-popups');
+            var frame3 = createSandboxedAdFrame(adm, 340, 250, 340, 250, '#f7f7f7');
             container.innerHTML = '';
             var wrapper3 = document.createElement('div');
             wrapper3.className = 'ad-rendered';
-            wrapper3.appendChild(iframe3);
+            wrapper3.appendChild(frame3);
             container.appendChild(wrapper3);
-            var doc3 = iframe3.contentDocument || iframe3.contentWindow.document;
-            doc3.open();
-            doc3.write('<!DOCTYPE html><html><head><style>body{margin:0;background:#f7f7f7;display:flex;align-items:center;justify-content:center}</style></head><body>' + adm + '</body></html>');
-            doc3.close();
             addLog('imp', 'Rendered native fallback as banner', adm.length + ' bytes');
         }
     }
