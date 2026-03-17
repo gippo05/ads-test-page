@@ -143,10 +143,12 @@
     </style>
 </head>
 <body>
+
 <div class="header">
     <h1>🎯 AdVanced DSP — Ad Delivery Test Harness</h1>
     <span class="badge">v1.0 Test Environment</span>
 </div>
+
 <div class="controls">
     <div>
         <label>Bidder Endpoint</label><br>
@@ -165,6 +167,7 @@
         <button class="secondary" onclick="clearAll()">Clear</button>
     </div>
 </div>
+
 <div class="main">
     <div class="sidebar">
         <h3>📋 Event Log</h3>
@@ -189,6 +192,7 @@
                     <span id="price-banner-300x250">—</span>
                 </div>
             </div>
+
             <!-- Banner 728x90 -->
             <div class="ad-slot" id="slot-banner-728x90">
                 <div class="ad-slot-header">
@@ -205,6 +209,7 @@
                     <span id="price-banner-728x90">—</span>
                 </div>
             </div>
+
             <!-- Banner 160x600 -->
             <div class="ad-slot" id="slot-banner-160x600">
                 <div class="ad-slot-header">
@@ -221,6 +226,7 @@
                     <span id="price-banner-160x600">—</span>
                 </div>
             </div>
+
             <!-- Banner 320x50 Mobile -->
             <div class="ad-slot" id="slot-banner-320x50">
                 <div class="ad-slot-header">
@@ -237,6 +243,7 @@
                     <span id="price-banner-320x50">—</span>
                 </div>
             </div>
+
             <!-- Video VAST -->
             <div class="ad-slot" id="slot-video-vast">
                 <div class="ad-slot-header">
@@ -253,6 +260,7 @@
                     <span id="price-video-vast">—</span>
                 </div>
             </div>
+
             <!-- Native -->
             <div class="ad-slot" id="slot-native">
                 <div class="ad-slot-header">
@@ -269,6 +277,7 @@
                     <span id="price-native">—</span>
                 </div>
             </div>
+
             <!-- Audio -->
             <div class="ad-slot" id="slot-audio">
                 <div class="ad-slot-header">
@@ -285,6 +294,7 @@
                     <span id="price-audio">—</span>
                 </div>
             </div>
+
             <!-- Multi-imp (multiple sizes in one request) -->
             <div class="ad-slot" id="slot-multi">
                 <div class="ad-slot-header">
@@ -302,10 +312,12 @@
                 </div>
             </div>
         </div>
+
         <h3 style="margin-top: 24px; font-size: 14px; color: #888;">Raw Bid Responses</h3>
         <pre class="json-output" id="rawResponses">Run tests to see raw OpenRTB responses...</pre>
     </div>
 </div>
+
 <div class="stats-bar">
     <div class="stat">Requests: <span id="stat-requests">0</span></div>
     <div class="stat">Bids Won: <span id="stat-bids">0</span></div>
@@ -315,10 +327,12 @@
     <div class="stat">Impressions: <span id="stat-impressions">0</span></div>
     <div class="stat">Clicks: <span id="stat-clicks">0</span></div>
 </div>
+
 <script>
 // ─── State ───
 const stats = { requests: 0, bids: 0, nobids: 0, errors: 0, latencies: [], impressions: 0, clicks: 0 };
 const rawResults = {};
+
 // ─── Logging ───
 function log(type, message, detail = '') {
     const el = document.getElementById('eventLog');
@@ -331,6 +345,7 @@ function log(type, message, detail = '') {
         </div>
     ` + el.innerHTML;
 }
+
 function updateStats() {
     document.getElementById('stat-requests').textContent = stats.requests;
     document.getElementById('stat-bids').textContent = stats.bids;
@@ -343,10 +358,12 @@ function updateStats() {
         document.getElementById('stat-latency').textContent = avg + 'ms';
     }
 }
+
 function setSlotStatus(slotId, status) {
     const dot = document.getElementById(`status-${slotId}`);
     if (dot) { dot.className = `status-dot ${status}`; }
 }
+
 // ─── OpenRTB Bid Request Builder ───
 function buildBidRequest(impressions) {
     const domain = document.getElementById('testDomain').value;
@@ -383,6 +400,7 @@ function buildBidRequest(impressions) {
         regs: { ext: { gdpr: 0 }, coppa: 0 }
     };
 }
+
 // ─── Send Bid Request ───
 async function sendBid(slotId, bidRequest) {
     const baseUrl = document.getElementById('bidderUrl').value.replace(/\/$/, '');
@@ -453,6 +471,7 @@ async function sendBid(slotId, bidRequest) {
     updateStats();
     document.getElementById('rawResponses').textContent = JSON.stringify(rawResults, null, 2);
 }
+
 // ─── Render Ad Creative ───
 function renderAd(slotId, bid) {
     const container = document.getElementById(`ad-${slotId}`);
@@ -489,6 +508,7 @@ function renderAd(slotId, bid) {
         fireBeacon(bid.burl.replace('${AUCTION_PRICE}', bid.price || 0), 'burl');
     }
 }
+
 function renderBanner(container, bid) {
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'border:none;width:100%;height:100%;';
@@ -517,6 +537,7 @@ function renderBanner(container, bid) {
         } catch(e) { /* cross-origin */ }
     });
 }
+
 function renderVAST(container, bid) {
     // Parse VAST and extract media file
     const parser = new DOMParser();
@@ -561,6 +582,7 @@ function renderVAST(container, bid) {
     updateStats();
     log('imp', 'VAST parsed', `${mediaFiles.length} media files, ${impressions.length} trackers`);
 }
+
 function renderNative(container, bid) {
     try {
         const native = JSON.parse(bid.adm);
@@ -600,16 +622,19 @@ function renderNative(container, bid) {
     updateStats();
     log('imp', 'Native ad rendered');
 }
+
 // ─── Tracking Helpers ───
 function fireBeacon(url, type) {
     const img = new Image();
     img.src = url;
     log('imp', `Fired ${type}`, url.substring(0, 120));
 }
+
 function fireWinNotice(nurl, price) {
     const url = nurl.replace('${AUCTION_PRICE}', price || 0);
     fireBeacon(url, 'nurl');
 }
+
 // ─── Test Definitions ───
 const testSlots = [
     {
@@ -684,6 +709,7 @@ const testSlots = [
         ]
     }
 ];
+
 // ─── Run Tests ───
 async function runAllTests() {
     log('bid', '🚀 Starting all ad delivery tests...', `${testSlots.length} slots`);
@@ -697,6 +723,7 @@ async function runAllTests() {
     await Promise.all(promises);
     log('bid', '✅ All tests completed', `${stats.bids} bids, ${stats.nobids} no-bids, ${stats.errors} errors`);
 }
+
 function clearAll() {
     stats.requests = 0; stats.bids = 0; stats.nobids = 0; stats.errors = 0;
     stats.latencies = []; stats.impressions = 0; stats.clicks = 0;
@@ -713,5 +740,6 @@ function clearAll() {
     });
 }
 </script>
+
 </body>
 </html>
