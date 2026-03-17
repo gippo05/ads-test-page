@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdVanced DSP - Ad Delivery Test Page</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-bottom: 1px solid #2a2a4a;
+            padding: 20px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header h1 { font-size: 20px; color: #00d4ff; }
+        .header .badge { background: #00d4ff22; color: #00d4ff; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        
+        .controls {
+            background: #12121a;
+            border-bottom: 1px solid #2a2a4a;
+            padding: 16px 40px;
+            display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+        }
+        .controls label { font-size: 13px; color: #888; }
+        .controls input, .controls select {
+            background: #1a1a2e; border: 1px solid #2a2a4a; color: #e0e0e0;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px;
+        }
+        .controls button {
+            background: linear-gradient(135deg, #00d4ff, #0088cc);
+            color: #000; border: none; padding: 8px 20px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 13px;
+        }
+        .controls button:hover { opacity: 0.9; }
+        .controls button.secondary {
+            background: #2a2a4a; color: #e0e0e0;
+        }
+        
+        .main { display: flex; height: calc(100vh - 130px); }
+        
+        .sidebar {
+            width: 320px; min-width: 320px;
+            background: #12121a; border-right: 1px solid #2a2a4a;
+            overflow-y: auto; padding: 16px;
+        }
+        .sidebar h3 { font-size: 14px; color: #00d4ff; margin-bottom: 12px; }
+        
+        .log-entry {
+            background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 6px;
+            padding: 10px; margin-bottom: 8px; font-size: 12px;
+        }
+        .log-entry .time { color: #666; }
+        .log-entry .type { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+        .log-entry .type.bid { background: #00d4ff22; color: #00d4ff; }
+        .log-entry .type.imp { background: #00ff8822; color: #00ff88; }
+        .log-entry .type.click { background: #ffaa0022; color: #ffaa00; }
+        .log-entry .type.error { background: #ff444422; color: #ff4444; }
+        .log-entry .detail { color: #999; margin-top: 4px; word-break: break-all; }
+        
+        .content { flex: 1; overflow-y: auto; padding: 24px; }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .ad-slot {
+            background: #12121a; border: 1px solid #2a2a4a; border-radius: 8px;
+            overflow: hidden;
+        }
+        .ad-slot-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .ad-slot-header h4 { font-size: 13px; }
+        .ad-slot-header .size { color: #666; font-size: 12px; }
+        .ad-slot-body {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 200px; padding: 16px; position: relative;
+        }
+        .ad-slot-body .placeholder {
+            border: 2px dashed #2a2a4a; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            color: #444; font-size: 12px; text-align: center;
+        }
+        .ad-slot-body .ad-rendered {
+            border: 1px solid #00d4ff44;
+            box-shadow: 0 0 20px #00d4ff11;
+            position: relative;
+        }
+        .ad-slot-footer {
+            padding: 8px 16px;
+            border-top: 1px solid #2a2a4a;
+            font-size: 11px; color: #666;
+            display: flex; justify-content: space-between;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.waiting { background: #666; }
+        .status-dot.loading { background: #ffaa00; animation: pulse 1s infinite; }
+        .status-dot.success { background: #00ff88; }
+        .status-dot.error { background: #ff4444; }
+        
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        .stats-bar {
+            background: #12121a; border-top: 1px solid #2a2a4a;
+            padding: 12px 40px; display: flex; gap: 32px;
+            position: fixed; bottom: 0; left: 0; right: 0;
+        }
+        .stat { font-size: 12px; }
+        .stat span { color: #00d4ff; font-weight: 600; }
+        
+        .native-ad {
+            background: #1a1a2e; border-radius: 8px; padding: 16px; max-width: 400px;
+        }
+        .native-ad img { width: 100%; border-radius: 6px; margin-bottom: 10px; }
+        .native-ad h3 { font-size: 16px; margin-bottom: 6px; color: #fff; }
+        .native-ad p { font-size: 13px; color: #aaa; margin-bottom: 10px; }
+        .native-ad .cta-btn {
+            background: #00d4ff; color: #000; padding: 8px 16px;
+            border: none; border-radius: 4px; font-weight: 600; cursor: pointer;
+        }
+        .native-ad .sponsored { font-size: 10px; color: #666; margin-top: 8px; }
+        
+        .video-ad-container { position: relative; background: #000; border-radius: 6px; overflow: hidden; }
+        .video-ad-container video { width: 100%; display: block; }
+        .video-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.5); cursor: pointer;
+        }
+        .video-overlay svg { width: 48px; height: 48px; fill: #fff; opacity: 0.8; }
+        
+        pre.json-output {
+            background: #0a0a0f; border: 1px solid #2a2a4a; border-radius: 6px;
+            padding: 12px; font-size: 11px; color: #00d4ff; overflow-x: auto;
+            max-height: 300px; overflow-y: auto; margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>🎯 AdVanced DSP — Ad Delivery Test Harness</h1>
+    <span class="badge">v1.0 Test Environment</span>
+</div>
+<div class="controls">
+    <div>
+        <label>Bidder Endpoint</label><br>
+        <input type="text" id="bidderUrl" value="https://rtb.ad-vanced.media" style="width: 280px;" />
+    </div>
+    <div>
+        <label>Test Domain</label><br>
+        <input type="text" id="testDomain" value="test-publisher.example.com" />
+    </div>
+    <div>
+        <label>Geo (ISO)</label><br>
+        <input type="text" id="testGeo" value="USA" style="width: 60px;" />
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 8px;">
+        <button onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="secondary" onclick="clearAll()">Clear</button>
+    </div>
+</div>
+<div class="main">
+    <div class="sidebar">
+        <h3>📋 Event Log</h3>
+        <div id="eventLog"></div>
+    </div>
+    
+    <div class="content">
+        <div class="test-grid">
+            <!-- Banner 300x250 -->
+            <div class="ad-slot" id="slot-banner-300x250">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-banner-300x250"></span>Banner — Medium Rectangle</h4>
+                    <span class="size">300×250</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-banner-300x250" style="width:300px;height:250px;">
+                        Waiting for bid...
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-banner-300x250">—</span>
+                    <span id="price-banner-300x250">—</span>
+                </div>
+            </div>
+            <!-- Banner 728x90 -->
+            <div class="ad-slot" id="slot-banner-728x90">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-banner-728x90"></span>Banner — Leaderboard</h4>
+                    <span class="size">728×90</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-banner-728x90" style="width:100%;max-width:728px;height:90px;">
+                        Waiting for bid...
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-banner-728x90">—</span>
+                    <span id="price-banner-728x90">—</span>
+                </div>
+            </div>
+            <!-- Banner 160x600 -->
+            <div class="ad-slot" id="slot-banner-160x600">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-banner-160x600"></span>Banner — Skyscraper</h4>
+                    <span class="size">160×600</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-banner-160x600" style="width:160px;height:300px;">
+                        Waiting for bid...<br>(truncated height)
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-banner-160x600">—</span>
+                    <span id="price-banner-160x600">—</span>
+                </div>
+            </div>
+            <!-- Banner 320x50 Mobile -->
+            <div class="ad-slot" id="slot-banner-320x50">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-banner-320x50"></span>Banner — Mobile Leaderboard</h4>
+                    <span class="size">320×50</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-banner-320x50" style="width:320px;height:50px;">
+                        Waiting for bid...
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-banner-320x50">—</span>
+                    <span id="price-banner-320x50">—</span>
+                </div>
+            </div>
+            <!-- Video VAST -->
+            <div class="ad-slot" id="slot-video-vast">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-video-vast"></span>Video — VAST Pre-roll</h4>
+                    <span class="size">640×480</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-video-vast" style="width:320px;height:240px;">
+                        Waiting for bid...<br>(Video/VAST)
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-video-vast">—</span>
+                    <span id="price-video-vast">—</span>
+                </div>
+            </div>
+            <!-- Native -->
+            <div class="ad-slot" id="slot-native">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-native"></span>Native — In-Feed</h4>
+                    <span class="size">Responsive</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-native" style="width:100%;min-height:200px;">
+                        Waiting for bid...<br>(Native)
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-native">—</span>
+                    <span id="price-native">—</span>
+                </div>
+            </div>
+            <!-- Audio -->
+            <div class="ad-slot" id="slot-audio">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-audio"></span>Audio — Companion Banner</h4>
+                    <span class="size">300×250 + Audio</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-audio" style="width:300px;height:250px;">
+                        Waiting for bid...<br>(Audio)
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-audio">—</span>
+                    <span id="price-audio">—</span>
+                </div>
+            </div>
+            <!-- Multi-imp (multiple sizes in one request) -->
+            <div class="ad-slot" id="slot-multi">
+                <div class="ad-slot-header">
+                    <h4><span class="status-dot waiting" id="status-multi"></span>Multi-Imp Request</h4>
+                    <span class="size">300×250 + 728×90</span>
+                </div>
+                <div class="ad-slot-body">
+                    <div class="placeholder" id="ad-multi" style="width:100%;min-height:150px;">
+                        Waiting for bid...<br>(2 impressions in 1 request)
+                    </div>
+                </div>
+                <div class="ad-slot-footer">
+                    <span id="latency-multi">—</span>
+                    <span id="price-multi">—</span>
+                </div>
+            </div>
+        </div>
+        <h3 style="margin-top: 24px; font-size: 14px; color: #888;">Raw Bid Responses</h3>
+        <pre class="json-output" id="rawResponses">Run tests to see raw OpenRTB responses...</pre>
+    </div>
+</div>
+<div class="stats-bar">
+    <div class="stat">Requests: <span id="stat-requests">0</span></div>
+    <div class="stat">Bids Won: <span id="stat-bids">0</span></div>
+    <div class="stat">No-Bids: <span id="stat-nobids">0</span></div>
+    <div class="stat">Errors: <span id="stat-errors">0</span></div>
+    <div class="stat">Avg Latency: <span id="stat-latency">—</span></div>
+    <div class="stat">Impressions: <span id="stat-impressions">0</span></div>
+    <div class="stat">Clicks: <span id="stat-clicks">0</span></div>
+</div>
+<script>
+// ─── State ───
+const stats = { requests: 0, bids: 0, nobids: 0, errors: 0, latencies: [], impressions: 0, clicks: 0 };
+const rawResults = {};
+// ─── Logging ───
+function log(type, message, detail = '') {
+    const el = document.getElementById('eventLog');
+    const time = new Date().toLocaleTimeString();
+    el.innerHTML = `
+        <div class="log-entry">
+            <span class="time">${time}</span> <span class="type ${type}">${type.toUpperCase()}</span>
+            <div>${message}</div>
+            ${detail ? `<div class="detail">${detail}</div>` : ''}
+        </div>
+    ` + el.innerHTML;
+}
+function updateStats() {
+    document.getElementById('stat-requests').textContent = stats.requests;
+    document.getElementById('stat-bids').textContent = stats.bids;
+    document.getElementById('stat-nobids').textContent = stats.nobids;
+    document.getElementById('stat-errors').textContent = stats.errors;
+    document.getElementById('stat-impressions').textContent = stats.impressions;
+    document.getElementById('stat-clicks').textContent = stats.clicks;
+    if (stats.latencies.length > 0) {
+        const avg = Math.round(stats.latencies.reduce((a,b) => a+b, 0) / stats.latencies.length);
+        document.getElementById('stat-latency').textContent = avg + 'ms';
+    }
+}
+function setSlotStatus(slotId, status) {
+    const dot = document.getElementById(`status-${slotId}`);
+    if (dot) { dot.className = `status-dot ${status}`; }
+}
+// ─── OpenRTB Bid Request Builder ───
+function buildBidRequest(impressions) {
+    const domain = document.getElementById('testDomain').value;
+    const geo = document.getElementById('testGeo').value;
+    
+    return {
+        id: 'test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+        imp: impressions,
+        site: {
+            domain: domain,
+            page: `https://${domain}/article/test-page`,
+            cat: ['IAB1'],
+            publisher: { id: 'pub-test-001', name: 'Test Publisher', domain: domain }
+        },
+        device: {
+            ua: navigator.userAgent,
+            ip: '203.0.113.1',
+            geo: { country: geo, region: 'CA', city: 'Los Angeles', zip: '90001' },
+            devicetype: 2,
+            os: 'Windows',
+            js: 1,
+            language: 'en',
+            w: screen.width,
+            h: screen.height
+        },
+        user: {
+            id: 'test-user-' + Math.random().toString(36).substr(2, 8),
+            buyeruid: 'adv-test-' + Date.now()
+        },
+        at: 1, // First-price auction
+        tmax: 300,
+        cur: ['USD'],
+        source: { fd: 1, tid: 'txn-' + Date.now() },
+        regs: { ext: { gdpr: 0 }, coppa: 0 }
+    };
+}
+// ─── Send Bid Request ───
+async function sendBid(slotId, bidRequest) {
+    const baseUrl = document.getElementById('bidderUrl').value.replace(/\/$/, '');
+    const endpoint = `${baseUrl}/v1/bid`;
+    
+    setSlotStatus(slotId, 'loading');
+    stats.requests++;
+    updateStats();
+    log('bid', `Sending bid for ${slotId}`, `${bidRequest.imp.length} imp(s) → ${endpoint}`);
+    
+    const start = performance.now();
+    
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-OpenRTB-Version': '2.5' },
+            body: JSON.stringify(bidRequest)
+        });
+        
+        const latency = Math.round(performance.now() - start);
+        stats.latencies.push(latency);
+        document.getElementById(`latency-${slotId}`).textContent = `${latency}ms`;
+        
+        if (res.status === 204) {
+            // No bid
+            stats.nobids++;
+            setSlotStatus(slotId, 'waiting');
+            log('bid', `No bid for ${slotId}`, `204 No Content (${latency}ms)`);
+            document.getElementById(`ad-${slotId}`).innerHTML = '<div style="color:#ff4444;font-size:12px;">No bid returned (204)</div>';
+            rawResults[slotId] = { status: 204, body: 'No Content' };
+        } else if (res.ok) {
+            const data = await res.json();
+            rawResults[slotId] = data;
+            
+            if (data.seatbid && data.seatbid.length > 0) {
+                stats.bids++;
+                setSlotStatus(slotId, 'success');
+                
+                data.seatbid.forEach(sb => {
+                    sb.bid.forEach(bid => {
+                        const price = bid.price ? `$${bid.price.toFixed(2)} CPM` : '—';
+                        document.getElementById(`price-${slotId}`).textContent = price;
+                        log('bid', `✅ Won: ${slotId}`, `${price} | adm: ${bid.adm ? bid.adm.length + ' chars' : 'none'} | nurl: ${bid.nurl ? 'yes' : 'no'}`);
+                        
+                        renderAd(slotId, bid);
+                    });
+                });
+            } else {
+                stats.nobids++;
+                setSlotStatus(slotId, 'waiting');
+                log('bid', `No seatbid for ${slotId}`, JSON.stringify(data).substring(0, 200));
+            }
+        } else {
+            stats.errors++;
+            setSlotStatus(slotId, 'error');
+            const errText = await res.text();
+            log('error', `HTTP ${res.status} for ${slotId}`, errText.substring(0, 200));
+        }
+    } catch (err) {
+        const latency = Math.round(performance.now() - start);
+        stats.latencies.push(latency);
+        stats.errors++;
+        setSlotStatus(slotId, 'error');
+        log('error', `Failed: ${slotId}`, err.message);
+        document.getElementById(`ad-${slotId}`).innerHTML = `<div style="color:#ff4444;font-size:12px;">Error: ${err.message}</div>`;
+    }
+    
+    updateStats();
+    document.getElementById('rawResponses').textContent = JSON.stringify(rawResults, null, 2);
+}
+// ─── Render Ad Creative ───
+function renderAd(slotId, bid) {
+    const container = document.getElementById(`ad-${slotId}`);
+    container.className = 'ad-rendered';
+    
+    if (bid.adm) {
+        // Check if it's VAST XML
+        if (bid.adm.trim().startsWith('<VAST') || bid.adm.trim().startsWith('<?xml')) {
+            renderVAST(container, bid);
+        }
+        // Check if it's native JSON
+        else if (bid.adm.trim().startsWith('{') && slotId === 'native') {
+            renderNative(container, bid);
+        }
+        // HTML banner
+        else {
+            renderBanner(container, bid);
+        }
+    } else if (bid.nurl) {
+        // Win notice URL only — fire it and show placeholder
+        fireWinNotice(bid.nurl, bid.price);
+        container.innerHTML = `
+            <div style="background:#1a1a2e;padding:16px;text-align:center;border-radius:4px;">
+                <div style="color:#00ff88;font-size:13px;">✅ Bid won — nurl fired</div>
+                <div style="color:#666;font-size:11px;margin-top:4px;">Price: $${bid.price?.toFixed(2) || '0.00'} CPM</div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '<div style="color:#ffaa00;font-size:12px;">Bid won but no creative markup (adm) or nurl</div>';
+    }
+    
+    // Fire impression tracking
+    if (bid.burl) {
+        fireBeacon(bid.burl.replace('${AUCTION_PRICE}', bid.price || 0), 'burl');
+    }
+}
+function renderBanner(container, bid) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'border:none;width:100%;height:100%;';
+    iframe.sandbox = 'allow-scripts allow-popups allow-popups-to-escape-sandbox';
+    container.innerHTML = '';
+    container.appendChild(iframe);
+    
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(bid.adm);
+    doc.close();
+    
+    // Track impression
+    stats.impressions++;
+    updateStats();
+    log('imp', `Impression: ${container.id}`, `Creative rendered in iframe`);
+    
+    // Add click listener
+    iframe.addEventListener('load', () => {
+        try {
+            iframe.contentDocument.addEventListener('click', () => {
+                stats.clicks++;
+                updateStats();
+                log('click', `Click: ${container.id}`);
+            });
+        } catch(e) { /* cross-origin */ }
+    });
+}
+function renderVAST(container, bid) {
+    // Parse VAST and extract media file
+    const parser = new DOMParser();
+    const vast = parser.parseFromString(bid.adm, 'text/xml');
+    
+    const mediaFiles = vast.querySelectorAll('MediaFile');
+    const impressions = vast.querySelectorAll('Impression');
+    const clickThrough = vast.querySelector('ClickThrough');
+    
+    let videoUrl = '';
+    mediaFiles.forEach(mf => {
+        if (mf.getAttribute('type')?.includes('video') || mf.textContent.trim().endsWith('.mp4')) {
+            videoUrl = mf.textContent.trim();
+        }
+    });
+    
+    container.innerHTML = `
+        <div class="video-ad-container" style="width:320px;">
+            ${videoUrl ? `
+                <video id="vast-player" width="320" height="240" controls preload="metadata">
+                    <source src="${videoUrl}" type="video/mp4">
+                </video>
+            ` : `
+                <div style="background:#1a1a2e;padding:24px;text-align:center;">
+                    <div style="color:#00d4ff;font-size:14px;">📹 VAST Response Received</div>
+                    <div style="color:#888;font-size:12px;margin-top:8px;">
+                        Media Files: ${mediaFiles.length}<br>
+                        Impressions: ${impressions.length}<br>
+                        Click URL: ${clickThrough ? 'Yes' : 'No'}
+                    </div>
+                </div>
+            `}
+        </div>
+    `;
+    
+    // Fire VAST impression pixels
+    impressions.forEach(imp => {
+        fireBeacon(imp.textContent.trim(), 'vast-imp');
+    });
+    
+    stats.impressions++;
+    updateStats();
+    log('imp', 'VAST parsed', `${mediaFiles.length} media files, ${impressions.length} trackers`);
+}
+function renderNative(container, bid) {
+    try {
+        const native = JSON.parse(bid.adm);
+        const assets = native.native?.assets || native.assets || [];
+        
+        let title = '', desc = '', imgUrl = '', ctaText = 'Learn More', clickUrl = '#';
+        
+        assets.forEach(a => {
+            if (a.title) title = a.title.text;
+            if (a.data && a.data.type === 2) desc = a.data.value;
+            if (a.img) imgUrl = a.img.url;
+            if (a.data && a.data.type === 12) ctaText = a.data.value;
+        });
+        
+        if (native.native?.link?.url) clickUrl = native.native.link.url;
+        if (native.link?.url) clickUrl = native.link.url;
+        
+        container.innerHTML = `
+            <div class="native-ad">
+                ${imgUrl ? `<img src="${imgUrl}" alt="${title}" onerror="this.style.display='none'">` : ''}
+                <h3>${title || 'Native Ad'}</h3>
+                <p>${desc || 'Sponsored content'}</p>
+                <button class="cta-btn" onclick="window.open('${clickUrl}','_blank');stats.clicks++;updateStats();log('click','Native click')">${ctaText}</button>
+                <div class="sponsored">Sponsored · AdVanced DSP</div>
+            </div>
+        `;
+        
+        // Fire native impression trackers
+        const impTrackers = native.native?.imptrackers || native.imptrackers || [];
+        impTrackers.forEach(url => fireBeacon(url, 'native-imp'));
+        
+    } catch(e) {
+        container.innerHTML = `<div style="color:#ffaa00;font-size:12px;">Native JSON parse error: ${e.message}</div>`;
+    }
+    
+    stats.impressions++;
+    updateStats();
+    log('imp', 'Native ad rendered');
+}
+// ─── Tracking Helpers ───
+function fireBeacon(url, type) {
+    const img = new Image();
+    img.src = url;
+    log('imp', `Fired ${type}`, url.substring(0, 120));
+}
+function fireWinNotice(nurl, price) {
+    const url = nurl.replace('${AUCTION_PRICE}', price || 0);
+    fireBeacon(url, 'nurl');
+}
+// ─── Test Definitions ───
+const testSlots = [
+    {
+        id: 'banner-300x250',
+        imp: [{ id: '1', banner: { w: 300, h: 250, pos: 1 }, bidfloor: 0.50, bidfloorcur: 'USD' }]
+    },
+    {
+        id: 'banner-728x90',
+        imp: [{ id: '1', banner: { w: 728, h: 90, pos: 1 }, bidfloor: 0.30, bidfloorcur: 'USD' }]
+    },
+    {
+        id: 'banner-160x600',
+        imp: [{ id: '1', banner: { w: 160, h: 600, pos: 3 }, bidfloor: 0.40, bidfloorcur: 'USD' }]
+    },
+    {
+        id: 'banner-320x50',
+        imp: [{ id: '1', banner: { w: 320, h: 50, pos: 1 }, bidfloor: 0.20, bidfloorcur: 'USD' }]
+    },
+    {
+        id: 'video-vast',
+        imp: [{ 
+            id: '1', 
+            video: { 
+                mimes: ['video/mp4','video/webm'], 
+                protocols: [2,5], 
+                w: 640, h: 480, 
+                minduration: 5, maxduration: 30, 
+                linearity: 1, placement: 1,
+                api: [1,2]
+            }, 
+            bidfloor: 2.00, bidfloorcur: 'USD'
+        }]
+    },
+    {
+        id: 'native',
+        imp: [{
+            id: '1',
+            native: {
+                request: JSON.stringify({
+                    ver: '1.2',
+                    assets: [
+                        { id: 1, required: 1, title: { len: 90 } },
+                        { id: 2, required: 1, img: { type: 3, w: 300, wmin: 100, h: 250, hmin: 100 } },
+                        { id: 3, required: 0, data: { type: 2, len: 200 } },
+                        { id: 4, required: 0, data: { type: 12, len: 30 } }
+                    ]
+                }),
+                ver: '1.2'
+            },
+            bidfloor: 1.00, bidfloorcur: 'USD'
+        }]
+    },
+    {
+        id: 'audio',
+        imp: [{
+            id: '1',
+            audio: {
+                mimes: ['audio/mp3','audio/mpeg'],
+                minduration: 10, maxduration: 30,
+                protocols: [1,2],
+                api: [1]
+            },
+            banner: { w: 300, h: 250 },
+            bidfloor: 3.00, bidfloorcur: 'USD'
+        }]
+    },
+    {
+        id: 'multi',
+        imp: [
+            { id: '1', banner: { w: 300, h: 250 }, bidfloor: 0.50, bidfloorcur: 'USD' },
+            { id: '2', banner: { w: 728, h: 90 }, bidfloor: 0.30, bidfloorcur: 'USD' }
+        ]
+    }
+];
+// ─── Run Tests ───
+async function runAllTests() {
+    log('bid', '🚀 Starting all ad delivery tests...', `${testSlots.length} slots`);
+    
+    // Fire all in parallel
+    const promises = testSlots.map(slot => {
+        const bidReq = buildBidRequest(slot.imp);
+        return sendBid(slot.id, bidReq);
+    });
+    
+    await Promise.all(promises);
+    log('bid', '✅ All tests completed', `${stats.bids} bids, ${stats.nobids} no-bids, ${stats.errors} errors`);
+}
+function clearAll() {
+    stats.requests = 0; stats.bids = 0; stats.nobids = 0; stats.errors = 0;
+    stats.latencies = []; stats.impressions = 0; stats.clicks = 0;
+    updateStats();
+    document.getElementById('eventLog').innerHTML = '';
+    document.getElementById('rawResponses').textContent = 'Run tests to see raw OpenRTB responses...';
+    
+    testSlots.forEach(slot => {
+        setSlotStatus(slot.id, 'waiting');
+        const el = document.getElementById(`ad-${slot.id}`);
+        if (el) { el.className = 'placeholder'; el.innerHTML = 'Waiting for bid...'; }
+        document.getElementById(`latency-${slot.id}`).textContent = '—';
+        document.getElementById(`price-${slot.id}`).textContent = '—';
+    });
+}
+</script>
+</body>
+</html>
